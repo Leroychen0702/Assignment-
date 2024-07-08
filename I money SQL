@@ -1,0 +1,115 @@
+-- Ranking loans by amount for each customer
+SELECT
+    customer_id,
+    loan_id,
+    loan_amount,
+    RANK() OVER (PARTITION BY customer_id ORDER BY loan_amount DESC) AS loan_rank
+FROM
+    loans;
+
+
+
+-- Counting approved and rejected loans for each customer
+SELECT
+    customer_id,
+    COUNT(CASE WHEN loan_status = 'approved' THEN 1 END) AS num_approved_loans,
+    COUNT(CASE WHEN loan_status = 'rejected' THEN 1 END) AS num_rejected_loans
+FROM
+    loans
+GROUP BY
+    customer_id;
+
+
+
+-- Finding customers with high-value loans (> $100,000)
+WITH high_value_loans AS (
+    SELECT
+        customer_id,
+        loan_amount
+    FROM
+        loans
+    WHERE
+        loan_amount > 100000
+)
+SELECT
+    c.customer_id,
+    c.customer_name,
+    hvl.customer_id AS high_loan_customer,
+    hvl.loan_amount AS high_loan_amount
+FROM
+    customers c
+LEFT JOIN
+    high_value_loans hvl ON c.customer_id = hvl.customer_id;
+
+
+
+-- Selecting loans for VIP customers
+SELECT
+    customer_id,
+    loan_amount,
+    loan_status
+FROM
+    loans
+WHERE
+    customer_id IN (
+        SELECT
+            customer_id
+        FROM
+            customers
+        WHERE
+            customer_type = 'VIP'
+    );
+
+
+
+-- Summing personal, business, and mortgage loans for each customer
+SELECT
+    customer_id,
+    SUM(CASE WHEN loan_type = 'personal' THEN loan_amount ELSE 0 END) AS total_personal_loans,
+    SUM(CASE WHEN loan_type = 'business' THEN loan_amount ELSE 0 END) AS total_business_loans,
+    SUM(CASE WHEN loan_type = 'mortgage' THEN loan_amount ELSE 0 END) AS total_mortgage_loans
+FROM
+    loans
+GROUP BY
+    customer_id;
+
+
+
+-- Finding customers with loans having at least one late payment
+SELECT
+    customer_id,
+    loan_amount
+FROM
+    loans l
+WHERE
+    EXISTS (
+        SELECT 1
+        FROM loan_payments lp
+        WHERE lp.loan_id = l.loan_id
+          AND lp.payment_status = 'late'
+    );
+
+
+
+-- Calculating the average loan amount per customer
+SELECT
+    customer_id,
+    AVG(loan_amount) AS avg_loan_amount
+FROM
+    loans
+GROUP BY
+    customer_id;
+
+
+
+
+-- Finding customers with the highest loan amounts
+SELECT
+    customer_id,
+    MAX(loan_amount) AS max_loan_amount
+FROM
+    loans
+GROUP BY
+    customer_id
+ORDER BY
+    max_loan_amount DESC;
